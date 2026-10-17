@@ -329,7 +329,10 @@ class TarjetaReporte extends StatelessWidget {
     const gris = TextStyle(color: AppTheme.grisTexto, fontSize: 13);
     final refs = [
       if (reporte.referencia.isNotEmpty) reporte.referencia,
-      'Ubicación manual',
+      reporte.tieneGps
+          ? 'GPS ${reporte.latitud!.toStringAsFixed(5)}, '
+              '${reporte.longitud!.toStringAsFixed(5)}'
+          : 'Ubicación manual',
     ].join(' · ');
 
     return Container(

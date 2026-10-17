@@ -69,6 +69,9 @@ class Reporte {
     this.referencia = '',
     DateTime? creado,
     this.enviado = false,
+    this.latitud,
+    this.longitud,
+    this.precisionM,
   })  : id = id ?? DateTime.now().microsecondsSinceEpoch.toString(),
         creado = creado ?? DateTime.now();
 
@@ -80,7 +83,21 @@ class Reporte {
   final DateTime creado;
   bool enviado;
 
-  Reporte copiarCon({String? tipo, String? direccion, String? referencia}) =>
+  /// Ubicación automática (GPS). null si no se pudo obtener.
+  final double? latitud;
+  final double? longitud;
+  final double? precisionM;
+
+  bool get tieneGps => latitud != null && longitud != null;
+
+  Reporte copiarCon({
+    String? tipo,
+    String? direccion,
+    String? referencia,
+    double? latitud,
+    double? longitud,
+    double? precisionM,
+  }) =>
       Reporte(
         id: id,
         nivel: nivel,
@@ -88,6 +105,9 @@ class Reporte {
         direccion: direccion ?? this.direccion,
         referencia: referencia ?? this.referencia,
         creado: creado,
+        latitud: latitud ?? this.latitud,
+        longitud: longitud ?? this.longitud,
+        precisionM: precisionM ?? this.precisionM,
       );
 
   /// Fila para la tabla `reportes` de Supabase (ver supabase/esquema.sql).
@@ -101,6 +121,8 @@ class Reporte {
         'departamento': perfil['departamento'],
         'municipio': perfil['municipio'],
         'comunidad': perfil['comunidad'],
+        'latitud': latitud,
+        'longitud': longitud,
         'creado_en': creado.toUtc().toIso8601String(),
       };
 
@@ -112,6 +134,9 @@ class Reporte {
         'referencia': referencia,
         'creado': creado.toIso8601String(),
         'enviado': enviado,
+        'latitud': latitud,
+        'longitud': longitud,
+        'precision_m': precisionM,
       };
 
   factory Reporte.desdeJson(Map<String, dynamic> j) => Reporte(
@@ -122,6 +147,9 @@ class Reporte {
         referencia: j['referencia'] as String? ?? '',
         creado: DateTime.parse(j['creado'] as String),
         enviado: j['enviado'] as bool? ?? false,
+        latitud: (j['latitud'] as num?)?.toDouble(),
+        longitud: (j['longitud'] as num?)?.toDouble(),
+        precisionM: (j['precision_m'] as num?)?.toDouble(),
       );
 }
 
@@ -256,12 +284,22 @@ class Publicacion {
   final String hace;
 }
 
-/// Punto afectado en el mapa (coordenadas normalizadas 0..1 sobre el dibujo).
+/// Punto afectado en el mapa (coordenadas reales).
 class PuntoMapa {
-  const PuntoMapa(this.x, this.y, this.nivel, this.titulo, this.lugar);
-  final double x;
-  final double y;
+  const PuntoMapa(
+    this.lat,
+    this.lon,
+    this.nivel,
+    this.titulo,
+    this.lugar, {
+    this.creado,
+    this.esMio = false,
+  });
+  final double lat;
+  final double lon;
   final NivelRiesgo nivel;
   final String titulo;
   final String lugar;
+  final DateTime? creado;
+  final bool esMio;
 }

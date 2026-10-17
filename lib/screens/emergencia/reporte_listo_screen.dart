@@ -5,7 +5,7 @@ import 'package:rally/core/theme.dart';
 import 'package:rally/services/auth_service.dart';
 import 'package:rally/widgets/comunes.dart';
 
-/// "Listo! ya lo reportamos con tu líder de comunidad".
+/// "¡Listo! Ya se lo reportamos a tu líder de comunidad".
 /// Si no hubo conexión, avisa que quedó guardado para enviarse después.
 class ReporteListoScreen extends StatelessWidget {
   const ReporteListoScreen({super.key, required this.enviado});
@@ -39,7 +39,7 @@ class ReporteListoScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     Text(
                       enviado
-                          ? '¡Listo! ya lo reportamos con tu líder de comunidad'
+                          ? '¡Listo! Ya se lo reportamos a tu líder de comunidad'
                           : 'Guardamos tu reporte',
                       textAlign: TextAlign.center,
                       style: const TextStyle(

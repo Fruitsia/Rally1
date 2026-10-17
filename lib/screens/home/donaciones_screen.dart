@@ -4,6 +4,7 @@ import 'package:rally/core/theme.dart';
 import 'package:rally/models/models.dart';
 import 'package:rally/screens/emergencia/alerta_screen.dart';
 import 'package:rally/screens/home/mis_donaciones_screen.dart';
+import 'package:rally/services/auth_service.dart';
 import 'package:rally/services/datos_service.dart';
 import 'package:rally/services/reporte_service.dart';
 import 'package:rally/widgets/comunes.dart';
@@ -22,6 +23,41 @@ class DonacionesScreen extends StatefulWidget {
 class _DonacionesScreenState extends State<DonacionesScreen> {
   String _ubicacion = 'Cerca de mí';
   late Future<List<Fundacion>> _fundaciones = DatosService.fundaciones();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.activa && ReporteService.instancia.alertaActiva) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) mostrarAvisoAyuda(context);
+      });
+    }
+  }
+
+  /// Filtra por la ubicación elegida. Las fundaciones guardan
+  /// «municipio, departamento» en `distancia`.
+  List<Fundacion> _filtrar(List<Fundacion> todas) {
+    final municipio =
+        (AuthService.perfil['municipio'] as String?)?.trim().toLowerCase() ?? '';
+    final departamento =
+        (AuthService.perfil['departamento'] as String?)?.trim().toLowerCase() ??
+            '';
+    bool enMunicipio(Fundacion f) =>
+        municipio.isNotEmpty && f.distancia.toLowerCase().contains(municipio);
+    bool enDepartamento(Fundacion f) =>
+        departamento.isNotEmpty &&
+        f.distancia.toLowerCase().contains(departamento);
+    switch (_ubicacion) {
+      case 'Mi municipio':
+        return todas.where(enMunicipio).toList();
+      case 'Cerca de mí':
+        // Primero las de tu municipio, luego las de tu departamento.
+        int peso(Fundacion f) => enMunicipio(f) ? 0 : (enDepartamento(f) ? 1 : 2);
+        return [...todas]..sort((a, b) => peso(a).compareTo(peso(b)));
+      default:
+        return todas;
+    }
+  }
 
   @override
   void didUpdateWidget(covariant DonacionesScreen old) {
@@ -56,7 +92,7 @@ class _DonacionesScreenState extends State<DonacionesScreen> {
             child: FutureBuilder<List<Fundacion>>(
               future: _fundaciones,
               builder: (context, snap) {
-                final lista = snap.data ?? const <Fundacion>[];
+                final lista = _filtrar(snap.data ?? const <Fundacion>[]);
                 return ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
@@ -75,7 +111,9 @@ class _DonacionesScreenState extends State<DonacionesScreen> {
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else if (lista.isEmpty)
-                      const Text('No hay fundaciones activas por ahora.')
+                      Text(_ubicacion == 'Mi municipio'
+                          ? 'No hay fundaciones registradas en tu municipio.'
+                          : 'No hay fundaciones activas por ahora.')
                     else ...[
                       _TarjetaFundacion(fundacion: lista.first),
                       if (lista.length > 1) ...[

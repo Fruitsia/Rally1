@@ -23,14 +23,17 @@ class _FeedScreenState extends State<FeedScreen> {
       DatosService.noticias('internacional');
   late Future<List<Publicacion>> _publicaciones = _cargarPublicaciones();
 
-  static Future<List<Publicacion>> _cargarPublicaciones() =>
+  static Future<List<Publicacion>> _cargarPublicaciones({
+    bool forzar = false,
+  }) =>
       DatosService.publicacionesRecientes(
         municipio: AuthService.perfil['municipio'] as String?,
+        forzar: forzar,
       );
 
   Future<void> _recargar() async {
     setState(() {
-      _publicaciones = _cargarPublicaciones();
+      _publicaciones = _cargarPublicaciones(forzar: true);
       _nacionales = DatosService.noticias('nacional');
       _internacionales = DatosService.noticias('internacional');
     });
@@ -364,18 +367,10 @@ class _FeedInternacional extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            const Expanded(
-              child: Text('Destacados',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: const Text('Ver todos',
-                  style: TextStyle(color: AppTheme.primary)),
-            ),
-          ],
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Destacados',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
         ),
         for (final n in noticias.skip(1)) _TarjetaNoticia(noticia: n),
         const _AvisoMuestra(),

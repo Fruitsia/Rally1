@@ -6,9 +6,10 @@ import 'package:rally/core/theme.dart';
 import 'package:rally/models/models.dart';
 import 'package:rally/screens/emergencia/reporte_listo_screen.dart';
 import 'package:rally/services/reporte_service.dart';
+import 'package:rally/services/sos_adaptadores.dart';
 import 'package:rally/widgets/comunes.dart';
 
-/// "¡Acaba de ocurrir una emergencia! ¿cómo te encuentras?"
+/// "¡Acaba de ocurrir una emergencia! ¿Cómo te encuentras?"
 /// Clasificación con la tríada del semáforo.
 class EstadoScreen extends StatefulWidget {
   const EstadoScreen({super.key});
@@ -25,12 +26,23 @@ class _EstadoScreenState extends State<EstadoScreen> {
     HapticFeedback.mediumImpact();
 
     if (nivel == NivelRiesgo.rojo) {
-      Navigator.of(context).pushReplacementNamed(Rutas.reportar);
+      // SOS con acompañamiento: guarda y envía la ubicación sola, sin
+      // formularios. El tipo se puede cambiar desde la pantalla del SOS.
+      Navigator.of(context).pushReplacementNamed(Rutas.sosActivo);
       return;
     }
 
     setState(() => _enviando = nivel);
-    final reporte = Reporte(nivel: nivel, tipo: nivel.etiqueta);
+    // Ubicación rápida (máx. 4 s): si no llega, se envía sin ella.
+    final u = await GeoUbicador.instancia.rapida();
+    if (!mounted) return;
+    final reporte = Reporte(
+      nivel: nivel,
+      tipo: nivel.etiqueta,
+      latitud: u?.punto.lat,
+      longitud: u?.punto.lon,
+      precisionM: u?.precisionM,
+    );
     final ok = await ReporteService.instancia.enviar(reporte);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -69,7 +81,7 @@ class _EstadoScreenState extends State<EstadoScreen> {
                     ),
                     SizedBox(height: 14),
                     Text(
-                      '¿cómo te encuentras?',
+                      '¿Cómo te encuentras?',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,

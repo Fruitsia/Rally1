@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:rally/core/theme.dart';
 import 'package:rally/models/models.dart';
 import 'package:rally/screens/emergencia/envio_reporte_screen.dart';
+import 'package:rally/services/sos_acompanamiento.dart' show PuntoGps;
+import 'package:rally/services/sos_adaptadores.dart';
 import 'package:rally/widgets/comunes.dart';
 
 /// Formulario "Reportar emergencia".
@@ -26,6 +28,33 @@ class _ReportarEmergenciaScreenState extends State<ReportarEmergenciaScreen> {
   );
   late final _referencia =
       TextEditingController(text: widget.inicial?.referencia ?? '');
+
+  PuntoGps? _gps;
+  bool _buscandoGps = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.inicial?.tieneGps ?? false) {
+      _buscandoGps = false;
+    } else {
+      _buscarGps();
+    }
+  }
+
+  Future<void> _buscarGps() async {
+    setState(() => _buscandoGps = true);
+    final u = await GeoUbicador.instancia.rapida(
+      limite: const Duration(seconds: 6),
+    );
+    if (!mounted) return;
+    setState(() {
+      _gps = u;
+      _buscandoGps = false;
+    });
+  }
+
+  bool get _tieneGps => _gps != null || (widget.inicial?.tieneGps ?? false);
 
   @override
   void dispose() {
@@ -63,17 +92,27 @@ class _ReportarEmergenciaScreenState extends State<ReportarEmergenciaScreen> {
     if (!_form.currentState!.validate()) return;
     HapticFeedback.heavyImpact();
     final base = widget.inicial;
+    final g = _gps;
+    final escrita = _direccion.text.trim();
+    // La base exige dirección en los reportes rojos: con GPS se completa sola.
+    final direccion = escrita.isEmpty && _tieneGps ? 'Ubicación GPS' : escrita;
     final reporte = base != null
         ? base.copiarCon(
             tipo: _tipo,
-            direccion: _direccion.text.trim(),
+            direccion: direccion,
             referencia: _referencia.text.trim(),
+            latitud: g?.punto.lat,
+            longitud: g?.punto.lon,
+            precisionM: g?.precisionM,
           )
         : Reporte(
             nivel: NivelRiesgo.rojo,
             tipo: _tipo,
-            direccion: _direccion.text.trim(),
+            direccion: direccion,
             referencia: _referencia.text.trim(),
+            latitud: g?.punto.lat,
+            longitud: g?.punto.lon,
+            precisionM: g?.precisionM,
           );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => EnvioReporteScreen(reporte: reporte)),
@@ -130,22 +169,50 @@ class _ReportarEmergenciaScreenState extends State<ReportarEmergenciaScreen> {
                     const SizedBox(height: 22),
                     const Text('Ubicación de la emergencia', style: etiqueta),
                     const SizedBox(height: 4),
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.location_off_outlined,
-                            size: 14, color: AppTheme.grisTexto),
-                        SizedBox(width: 6),
-                        Text('Sin ubicación automática. Escríbela aquí.',
-                            style: gris),
+                        if (_buscandoGps)
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          Icon(
+                            _tieneGps
+                                ? Icons.my_location
+                                : Icons.location_off_outlined,
+                            size: 14,
+                            color: _tieneGps ? AppTheme.verde : AppTheme.grisTexto,
+                          ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _buscandoGps
+                                ? 'Buscando tu ubicación…'
+                                : _tieneGps
+                                    ? 'Ubicación automática lista'
+                                        '${_gps == null ? '' : ' (±${_gps!.precisionM.round()} m)'}'
+                                        '. La dirección es opcional.'
+                                    : 'Sin ubicación automática. Escríbela aquí.',
+                            style: gris,
+                          ),
+                        ),
+                        if (!_buscandoGps && !_tieneGps)
+                          TextButton(
+                            onPressed: _buscarGps,
+                            child: const Text('Reintentar'),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _direccion,
                       textInputAction: TextInputAction.next,
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'Escribe dónde está ocurriendo'
-                          : null,
+                      validator: (v) =>
+                          (!_tieneGps && (v == null || v.trim().isEmpty))
+                              ? 'Escribe dónde está ocurriendo'
+                              : null,
                       decoration: _deco(
                         'Dirección (ej. Av. del Parque 120)',
                         Icons.edit_outlined,

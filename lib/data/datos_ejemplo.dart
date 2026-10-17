@@ -116,15 +116,15 @@ class DatosEjemplo {
     ),
   ];
 
-  /// Puntos medidos sobre el dibujo del mapa del diseño.
+  /// Puntos de muestra (solo se usan si no hay conexión con la base).
   static const puntosMapa = <PuntoMapa>[
-    PuntoMapa(0.70, 0.15, NivelRiesgo.amarillo, 'Árboles caídos', 'Norte'),
-    PuntoMapa(0.81, 0.33, NivelRiesgo.rojo, 'Viviendas dañadas', 'Noreste'),
-    PuntoMapa(0.35, 0.38, NivelRiesgo.rojo, 'Familias sin agua', 'Centro'),
-    PuntoMapa(0.13, 0.45, NivelRiesgo.amarillo, 'Vía obstruida', 'Oeste'),
-    PuntoMapa(0.57, 0.58, NivelRiesgo.amarillo, 'Sin energía', 'Centro sur'),
-    PuntoMapa(0.34, 0.72, NivelRiesgo.rojo, 'Persona herida', 'Suroeste'),
-    PuntoMapa(0.80, 0.74, NivelRiesgo.rojo, 'Inundación', 'Este'),
-    PuntoMapa(0.63, 0.92, NivelRiesgo.amarillo, 'Deslave menor', 'Sur'),
+    PuntoMapa(13.0920, -86.3540, NivelRiesgo.amarillo, 'Árboles caídos', 'Estelí'),
+    PuntoMapa(12.9256, -85.9175, NivelRiesgo.rojo, 'Viviendas dañadas', 'Matagalpa'),
+    PuntoMapa(12.1364, -86.2514, NivelRiesgo.rojo, 'Familias sin agua', 'Managua'),
+    PuntoMapa(12.4379, -86.8780, NivelRiesgo.amarillo, 'Vía obstruida', 'León'),
+    PuntoMapa(11.9744, -86.0942, NivelRiesgo.amarillo, 'Sin energía', 'Masaya'),
+    PuntoMapa(12.6297, -87.1311, NivelRiesgo.rojo, 'Persona herida', 'Chinandega'),
+    PuntoMapa(12.0137, -83.7635, NivelRiesgo.rojo, 'Inundación', 'Bluefields'),
+    PuntoMapa(11.9299, -85.9560, NivelRiesgo.amarillo, 'Deslave menor', 'Granada'),
   ];
 }

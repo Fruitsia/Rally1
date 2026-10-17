@@ -7,7 +7,7 @@ import 'package:rally/services/reporte_service.dart';
 import 'package:rally/widgets/comunes.dart';
 
 /// Pantalla "ALERTA" que aparece cuando llega una alerta de emergencia.
-/// Al tocarla, lleva a "¿cómo te encuentras?".
+/// Al tocarla, lleva a "¿Cómo te encuentras?".
 class AlertaScreen extends StatefulWidget {
   const AlertaScreen({super.key});
 
@@ -90,7 +90,7 @@ class _AlertaScreenState extends State<AlertaScreen>
   }
 }
 
-/// Aviso rojo "A ocurrido una emergencia y hay personas que necesitan ayuda"
+/// Aviso rojo "Ha ocurrido una emergencia y hay personas que necesitan ayuda"
 /// (se muestra sobre Donaciones cuando hay una alerta activa).
 Future<void> mostrarAvisoAyuda(BuildContext context) {
   return showDialog<void>(

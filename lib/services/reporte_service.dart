@@ -19,6 +19,10 @@ class ReporteService extends ChangeNotifier {
   final List<Reporte> _reportes = [];
   RealtimeChannel? _canalAlertas;
 
+  /// Quién recibe las alertas. Se reemplaza cada vez que se abre Inicio, para
+  /// no llamar a una pantalla que ya se cerró (p. ej., después de cerrar sesión).
+  void Function(Map<String, dynamic> alerta)? _alLlegar;
+
   /// Se activa cuando llega una alerta de la comunidad (tabla `alertas`).
   bool alertaActiva = false;
 
@@ -96,6 +100,7 @@ class ReporteService extends ChangeNotifier {
 
   /// Escucha nuevas filas en la tabla `alertas` (Supabase Realtime).
   void escucharAlertas(void Function(Map<String, dynamic> alerta) alLlegar) {
+    _alLlegar = alLlegar;
     if (_canalAlertas != null) return;
     try {
       _canalAlertas = Supabase.instance.client
@@ -107,13 +112,18 @@ class ReporteService extends ChangeNotifier {
             callback: (payload) {
               alertaActiva = true;
               notifyListeners();
-              alLlegar(payload.newRecord);
+              _alLlegar?.call(payload.newRecord);
             },
           )
           .subscribe();
     } catch (e) {
       debugPrint('Realtime no disponible: $e');
     }
+  }
+
+  /// Deja de entregar alertas a una pantalla que se va a cerrar.
+  void dejarDeEscuchar(void Function(Map<String, dynamic> alerta) alLlegar) {
+    if (_alLlegar == alLlegar) _alLlegar = null;
   }
 
   void descartarAlerta() {

@@ -67,6 +67,13 @@ class AuthService {
 
   static Future<void> cerrarSesion() => _cliente.auth.signOut();
 
+  /// Actualiza los datos del perfil (se guardan en la cuenta de Supabase).
+  static Future<void> actualizarPerfil(Map<String, dynamic> datos) async {
+    await _cliente.auth
+        .updateUser(UserAttributes(data: {...perfil, ...datos}))
+        .timeout(const Duration(seconds: 12));
+  }
+
   /// Traduce los errores más comunes de Supabase al español.
   static String mensajeError(Object e) {
     if (e is AuthException) {

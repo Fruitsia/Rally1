@@ -35,26 +35,62 @@ class DatosService {
     }
   }
 
+  /// Filas de `puntos_mapa()` (reportes activos de las últimas 72 h, sin
+  /// datos personales). Se guardan 30 s para que el feed y el mapa no hagan
+  /// la misma consulta dos veces.
+  static List<Map<String, dynamic>>? _cachePuntos;
+  static DateTime? _cachePuntosHora;
+  static Future<List<Map<String, dynamic>>>? _pidiendoPuntos;
+
+  static Future<List<Map<String, dynamic>>> _filasPuntos({
+    bool forzar = false,
+  }) {
+    final hora = _cachePuntosHora;
+    if (!forzar &&
+        _cachePuntos != null &&
+        hora != null &&
+        DateTime.now().difference(hora) < const Duration(seconds: 30)) {
+      return Future.value(_cachePuntos);
+    }
+    // Si ya hay una consulta en curso, se reutiliza (sin duplicar).
+    return _pidiendoPuntos ??= () async {
+      try {
+        final filas = (await _db.rpc('puntos_mapa').timeout(_espera) as List)
+            .cast<Map<String, dynamic>>()
+          ..sort((a, b) =>
+              (b['creado_en'] as String).compareTo(a['creado_en'] as String));
+        _cachePuntos = filas;
+        _cachePuntosHora = DateTime.now();
+        return filas;
+      } finally {
+        _pidiendoPuntos = null;
+      }
+    }();
+  }
+
+  static NivelRiesgo _nivel(Object? v) => NivelRiesgo.values.firstWhere(
+        (n) => n.name == v,
+        orElse: () => NivelRiesgo.amarillo,
+      );
+
   /// Reportes recientes (sin datos personales) para "Pasó esto en ...".
-  /// Usa la función `puntos_mapa()` de la base.
   static Future<List<Publicacion>> publicacionesRecientes({
     String? municipio,
+    bool forzar = false,
   }) async {
     try {
-      final filas = (await _db.rpc('puntos_mapa').timeout(_espera) as List)
-          .cast<Map<String, dynamic>>()
+      final filas = (await _filasPuntos(forzar: forzar))
           .where((f) =>
               municipio == null ||
               municipio.isEmpty ||
-              f['municipio'] == municipio)
-          .toList()
-        ..sort((a, b) =>
-            (b['creado_en'] as String).compareTo(a['creado_en'] as String));
-      return filas.take(10).map((f) {
-        final nivel = NivelRiesgo.values.byName(f['nivel'] as String);
+              (f['municipio'] as String?)?.toLowerCase() ==
+                  municipio.toLowerCase())
+          .take(10);
+      return filas.map((f) {
+        final nivel = _nivel(f['nivel']);
         return Publicacion(
           nivel: nivel,
-          titulo: etiquetaCodigo(f['tipo'] as String, nivel),
+          titulo: etiquetaCodigo(f['tipo'] as String? ?? 'otro', nivel),
           lugar: (f['comunidad'] ?? f['municipio'] ?? 'Sin zona') as String,
           hace: _hace(DateTime.parse(f['creado_en'] as String)),
         );
@@ -64,6 +100,39 @@ class DatosService {
       return DatosEjemplo.publicaciones;
     }
   }
+
+  /// Puntos con coordenadas para el mapa. `ejemplo` es true si no hubo
+  /// conexión y se muestran datos de muestra.
+  static Future<({List<PuntoMapa> puntos, bool ejemplo})> puntosMapa({
+    bool forzar = false,
+  }) async {
+    try {
+      final filas = await _filasPuntos(forzar: forzar);
+      final puntos = <PuntoMapa>[];
+      for (final f in filas) {
+        final lat = (f['latitud'] as num?)?.toDouble();
+        final lon = (f['longitud'] as num?)?.toDouble();
+        if (lat == null || lon == null) continue;
+        final nivel = _nivel(f['nivel']);
+        final creado = DateTime.tryParse(f['creado_en'] as String? ?? '');
+        puntos.add(PuntoMapa(
+          lat,
+          lon,
+          nivel,
+          etiquetaCodigo(f['tipo'] as String? ?? 'otro', nivel),
+          (f['comunidad'] ?? f['municipio'] ?? 'Sin zona') as String,
+          creado: creado?.toLocal(),
+        ));
+        if (puntos.length >= 400) break; // suficiente y fluido
+      }
+      return (puntos: puntos, ejemplo: false);
+    } catch (e) {
+      debugPrint('Mapa sin conexión: $e');
+      return (puntos: DatosEjemplo.puntosMapa, ejemplo: true);
+    }
+  }
+
+  static String hace(DateTime fecha) => _hace(fecha);
 
   static String _hace(DateTime fecha) {
     final d = DateTime.now().difference(fecha.toLocal());
@@ -115,6 +184,33 @@ class DatosService {
       'monto': monto,
       'moneda': f.moneda,
     }).timeout(_espera);
+  }
+
+  // ───────── Contactos de emergencia (máx. 3) ─────────
+
+  static Future<List<Map<String, dynamic>>> contactos() async {
+    if (_db.auth.currentUser == null) return const [];
+    return await _db
+        .from('contactos_emergencia')
+        .select('id, nombre, telefono, parentesco')
+        .order('nombre')
+        .timeout(_espera);
+  }
+
+  static Future<void> agregarContacto({
+    required String nombre,
+    required String telefono,
+    String parentesco = '',
+  }) async {
+    await _db.from('contactos_emergencia').insert({
+      'nombre': nombre,
+      'telefono': telefono,
+      'parentesco': parentesco,
+    }).timeout(_espera);
+  }
+
+  static Future<void> borrarContacto(String id) async {
+    await _db.from('contactos_emergencia').delete().eq('id', id).timeout(_espera);
   }
 
   /// Guarda una preferencia de Configuración en la tabla `preferencias`.

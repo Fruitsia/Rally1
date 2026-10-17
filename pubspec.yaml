@@ -12,6 +12,16 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.3.0
   shared_preferences: ^2.2.0
+  # SOS con acompañamiento (GPS, batería, red, permisos, llamadas)
+  geolocator: any
+  battery_plus: any
+  connectivity_plus: any
+  permission_handler: any
+  url_launcher: any
+  android_intent_plus: any
+  # Mapa real (OpenStreetMap, sin API key)
+  flutter_map: any
+  latlong2: any
   
 dev_dependencies:
   flutter_test:

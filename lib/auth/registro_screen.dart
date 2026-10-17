@@ -5,6 +5,21 @@ import 'package:rally/core/theme.dart';
 import 'package:rally/services/auth_service.dart';
 import 'package:rally/widgets/comunes.dart';
 
+/// Ancho máximo del contenido en pantallas grandes (tablet / escritorio).
+const double _anchoMaximo = 520;
+
+/// Por debajo de este ancho, los campos en pareja se apilan en una columna.
+const double _anchoParaApilar = 340;
+
+/// Padding horizontal total aproximado del PanelRojo (izquierda + derecha).
+const double _paddingPanel = 40;
+
+/// Ancho útil del formulario según el ancho de la pantalla.
+double _anchoContenido(BuildContext context) {
+  final ancho = MediaQuery.sizeOf(context).width - _paddingPanel;
+  return ancho > _anchoMaximo ? _anchoMaximo : ancho;
+}
+
 /// Registro en 3 pasos: datos personales → ubicación → contacto y cuenta.
 class RegistroScreen extends StatefulWidget {
   const RegistroScreen({super.key});
@@ -106,85 +121,117 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final alto = MediaQuery.sizeOf(context).height;
+    // En pantallas bajas (o con el teclado abierto) se reduce el encabezado.
+    final compacto = alto < 700;
+
     return PopScope(
       canPop: _paso == 0,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _atras();
       },
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Column(
-            children: [
-              SafeArea(
+        body: CustomScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          slivers: [
+            // ── Encabezado con logo ──
+            SliverToBoxAdapter(
+              child: SafeArea(
                 bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 36),
-                  child: Column(
-                    children: [
-                      const Logo(Img.logoRojo, ancho: 260),
-                      const SizedBox(height: 14),
-                      Text(
-                        'Informa a tu comunidad y al mundo de lo que '
-                        'esta pasando',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.primary,
-                              fontWeight: FontWeight.w700,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _anchoMaximo),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          24, compacto ? 20 : 40, 24, compacto ? 20 : 36),
+                      child: Column(
+                        children: [
+                          FractionallySizedBox(
+                            widthFactor: 0.65,
+                            child: FittedBox(
+                              child: Logo(Img.logoRojo, ancho: 260),
                             ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Informa a tu comunidad y al mundo de lo que '
+                            'está pasando',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppTheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-              PanelRojo(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const TituloPanel('REGISTRAR'),
-                    const SizedBox(height: 6),
-                    _IndicadorPasos(paso: _paso),
-                    const SizedBox(height: 14),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: KeyedSubtree(
-                        key: ValueKey(_paso),
-                        child: switch (_paso) {
-                          0 => _paso1(),
-                          1 => _paso2(),
-                          _ => _paso3(),
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    BotonAmarillo(
-                      texto: _paso < 2 ? 'CONTINUAR' : 'REGISTRAR',
-                      cargando: _cargando,
-                      onPressed: _continuar,
-                    ),
-                    if (_paso > 0)
-                      Center(
-                        child: TextButton(
-                          onPressed: _atras,
-                          child: const Text('Volver',
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ),
-                  ],
+            ),
+
+            // ── Panel rojo con el formulario ──
+            SliverToBoxAdapter(
+              child: PanelRojo(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: _anchoMaximo),
+                    child: _formulario(),
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ── Relleno rojo hasta el final de la pantalla ──
+            // Va vacío a propósito: así Flutter no tiene que medir el
+            // formulario por adelantado (eso causaba el error de layout).
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: ColoredBox(color: AppTheme.rojo),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _fila(Widget a, Widget b) => Row(
+  Widget _formulario() => Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: a),
-          const SizedBox(width: 14),
-          Expanded(child: b),
+          const TituloPanel('REGISTRAR'),
+          const SizedBox(height: 6),
+          _IndicadorPasos(paso: _paso),
+          const SizedBox(height: 14),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: KeyedSubtree(
+              key: ValueKey(_paso),
+              child: switch (_paso) {
+                0 => _paso1(),
+                1 => _paso2(),
+                _ => _paso3(),
+              },
+            ),
+          ),
+          const SizedBox(height: 26),
+          BotonAmarillo(
+            texto: _paso < 2 ? 'CONTINUAR' : 'REGISTRARME',
+            cargando: _cargando,
+            onPressed: _continuar,
+          ),
+          if (_paso > 0)
+            Center(
+              child: TextButton(
+                onPressed: _atras,
+                child: const Text('Volver',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ),
         ],
       );
 
@@ -205,7 +252,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _fila(
+            _FilaResponsive(
               CampoPanel(
                 etiqueta: 'Nombre',
                 etiquetaGrande: true,
@@ -220,7 +267,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            _fila(
+            _FilaResponsive(
               CampoPanel(
                 etiqueta: 'Edad',
                 etiquetaGrande: true,
@@ -228,7 +275,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 teclado: TextInputType.number,
                 validator: (v) {
                   final n = int.tryParse(v ?? '');
-                  return (n == null || n < 1 || n > 120) ? 'Edad no válida' : null;
+                  return (n == null || n < 1 || n > 120)
+                      ? 'Edad no válida'
+                      : null;
                 },
               ),
               Column(
@@ -253,7 +302,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                       'Otro',
                       'Prefiero no decir',
                     ]
-                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                        .map((g) => DropdownMenuItem(
+                              value: g,
+                              child: Text(g, overflow: TextOverflow.ellipsis),
+                            ))
                         .toList(),
                     onChanged: (g) => setState(() => _genero = g),
                     validator: (v) => v == null ? 'Elige una opción' : null,
@@ -264,19 +316,33 @@ class _RegistroScreenState extends State<RegistroScreen> {
             const SizedBox(height: 10),
             _seccion('OFICIO'),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                for (final o in const ['Trabajador', 'Estudiante', 'Otro']) ...[
-                  Expanded(
-                    child: _ChipOficio(
-                      texto: o,
-                      seleccionado: _oficio == o,
-                      onTap: () => setState(() => _oficio = o),
-                    ),
-                  ),
-                  if (o != 'Otro') const SizedBox(width: 8),
-                ],
-              ],
+            // Wrap en lugar de Row: si no caben, pasan a la siguiente línea.
+            Builder(
+              builder: (context) {
+                const opciones = ['Trabajador', 'Estudiante', 'Otro'];
+                const espacio = 8.0;
+                final disponible = _anchoContenido(context);
+                final porFila = disponible < 300 ? 2 : 3;
+                // floor() evita que el redondeo empuje un chip a otra línea.
+                final ancho =
+                    ((disponible - espacio * (porFila - 1)) / porFila)
+                        .floorToDouble();
+                return Wrap(
+                  spacing: espacio,
+                  runSpacing: espacio,
+                  children: [
+                    for (final o in opciones)
+                      SizedBox(
+                        width: ancho,
+                        child: _ChipOficio(
+                          texto: o,
+                          seleccionado: _oficio == o,
+                          onTap: () => setState(() => _oficio = o),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -288,7 +354,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _seccion('PAÍS'),
-            _fila(
+            _FilaResponsive(
               CampoPanel(
                 etiqueta: 'País de residencia',
                 controller: _paisResidencia,
@@ -301,8 +367,8 @@ class _RegistroScreenState extends State<RegistroScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            _seccion('PAÍS'),
-            _fila(
+            _seccion('UBICACIÓN'),
+            _FilaResponsive(
               CampoPanel(etiqueta: 'Región', controller: _region),
               CampoPanel(
                 etiqueta: 'Municipio',
@@ -311,7 +377,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            _fila(
+            _FilaResponsive(
               CampoPanel(
                 etiqueta: 'Departamento',
                 controller: _departamento,
@@ -338,16 +404,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
               etiqueta: 'Número de teléfono',
               controller: _telefono,
               teclado: TextInputType.phone,
-              validator: (v) => (v == null || v.replaceAll(RegExp(r'\D'), '').length < 8)
-                  ? 'Teléfono no válido'
-                  : null,
+              validator: (v) =>
+                  (v == null || v.replaceAll(RegExp(r'\D'), '').length < 8)
+                      ? 'Teléfono no válido'
+                      : null,
             ),
             const SizedBox(height: 14),
             CampoPanel(
-              etiqueta: 'Correo',
+              etiqueta: 'Correo electrónico',
               controller: _correo,
               teclado: TextInputType.emailAddress,
-              validator: (v) => (v == null || !RegExp(r'^\S+@\S+\.\S+$').hasMatch(v.trim()))
+              validator: (v) => (v == null ||
+                      !RegExp(r'^\S+@\S+\.\S+$').hasMatch(v.trim()))
                   ? 'Escribe un correo válido'
                   : null,
             ),
@@ -373,6 +441,31 @@ class _RegistroScreenState extends State<RegistroScreen> {
       );
 }
 
+/// Dos campos lado a lado; en pantallas muy angostas se apilan.
+class _FilaResponsive extends StatelessWidget {
+  const _FilaResponsive(this.a, this.b);
+  final Widget a;
+  final Widget b;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_anchoContenido(context) < _anchoParaApilar) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [a, const SizedBox(height: 14), b],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: a),
+        const SizedBox(width: 14),
+        Expanded(child: b),
+      ],
+    );
+  }
+}
+
 class _ChipOficio extends StatelessWidget {
   const _ChipOficio({
     required this.texto,
@@ -389,17 +482,20 @@ class _ChipOficio extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
           color: seleccionado ? AppTheme.secondary : Colors.white,
           borderRadius: BorderRadius.circular(8),
           boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(0, 2)),
+            BoxShadow(
+                color: Colors.black26, blurRadius: 3, offset: Offset(0, 2)),
           ],
         ),
         alignment: Alignment.center,
         child: Text(
           texto,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: AppTheme.primary,
             fontSize: 13,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:rally/core/rutas.dart';
 import 'package:rally/core/theme.dart';
 import 'package:rally/services/reporte_service.dart';
+import 'package:rally/services/sos_adaptadores.dart';
 import 'package:rally/widgets/comunes.dart';
 
 /// Pantalla de carga / inicio de NUNC.
@@ -28,9 +29,14 @@ class _CargaInicioScreenState extends State<CargaInicioScreen> {
     // Carga los reportes guardados en el teléfono mientras se ve el logo.
     ReporteService.instancia.cargar();
 
-    _timer = Timer(const Duration(seconds: 3), () {
+    // Si la app se cerró con un SOS abierto, se retoma al terminar el logo.
+    final haySos = SosApp.reanudar();
+
+    _timer = Timer(const Duration(seconds: 3), () async {
+      final sos = await haySos;
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(Rutas.emergencia);
+      Navigator.of(context)
+          .pushReplacementNamed(sos ? Rutas.sosActivo : Rutas.emergencia);
     });
   }
 
@@ -54,7 +60,7 @@ class _CargaInicioScreenState extends State<CargaInicioScreen> {
                 const Logo(Img.logoBlanco, ancho: 240),
                 const SizedBox(height: 24),
                 const Text(
-                  'Informa a tu comunidad y al\nmundo de lo que esta pasando',
+                  'Informa a tu comunidad y al\nmundo de lo que está pasando',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
