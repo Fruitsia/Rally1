@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:rally/core/rutas.dart';
 import 'package:rally/core/theme.dart';
+import 'package:rally/services/auth_service.dart';
+import 'package:rally/widgets/comunes.dart';
 
 /// Pantalla "¿Está ocurriendo una emergencia ahora mismo?"
-/// Ruta: lib/screens/auth/emergencia_screen.dart
 class EmergenciaScreen extends StatelessWidget {
   const EmergenciaScreen({super.key});
 
   static const Color _grisBoton = Color(0xFFD9D9D9);
 
   void _onSos(BuildContext context) {
-    // Navigator.of(context).pushNamed('/sos');
+    Navigator.of(context).pushNamed(Rutas.estado);
   }
 
   void _onContinuar(BuildContext context) {
-    // Navigator.of(context).pushReplacementNamed('/home');
+    Navigator.of(context).pushReplacementNamed(
+      AuthService.haySesion ? Rutas.home : Rutas.login,
+    );
   }
 
   @override
@@ -29,25 +33,13 @@ class EmergenciaScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              // Logo (esquina superior derecha)
-              Align(
+              const Align(
                 alignment: Alignment.centerRight,
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Image.asset(
-                    'assets/images/logo/logo_icono.png',
-                    height: 48,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.shield,
-                      color: AppTheme.primary,
-                      size: 40,
-                    ),
-                  ),
+                  padding: EdgeInsets.only(top: 12),
+                  child: Logo(Img.isoRojo, alto: 52),
                 ),
               ),
-
-              // Contenido central
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -70,8 +62,6 @@ class EmergenciaScreen extends StatelessWidget {
                   ],
                 ),
               ),
-
-              // Botón inferior
               Padding(
                 padding: const EdgeInsets.only(bottom: 32),
                 child: TextButton(
